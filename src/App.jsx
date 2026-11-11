@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShieldAlert, AlertTriangle, CheckCircle, Lock, Smartphone, RefreshCw, Volume2, ShieldCheck, Phone, MessageSquare, Send, XCircle } from 'lucide-react';
+import { ShieldAlert, AlertTriangle, CheckCircle, Lock, Smartphone, RefreshCw, Volume2, ShieldCheck, Phone, MessageSquare, Send, XCircle, Home, Mail, Calendar, Camera, Settings, MessageCircle } from 'lucide-react';
 
 export default function App() {
   // 狀態設定
@@ -11,6 +11,9 @@ export default function App() {
   const [isAlertPlaying, setIsAlertPlaying] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
   const [isTimeoutCancelled, setIsTimeoutCancelled] = useState(false);
+  
+  // 💡 新增：家屬端是否處於「手機首頁」狀態
+  const [isHomeScreen, setIsHomeScreen] = useState(false);
 
   // 家屬緊急聯絡資訊 (模擬資料)
   const familyContact = {
@@ -109,6 +112,7 @@ export default function App() {
     setIsApproved(false);
     setIsTimeoutCancelled(false);
     setCountdown(30);
+    setIsHomeScreen(false);
   };
 
   return (
@@ -214,7 +218,7 @@ export default function App() {
                     已觸發風控託管，正在通知緊急聯絡人...
                   </div>
                   <p className="text-xs text-slate-300 leading-relaxed">
-                    已自動同步推播至預設聯絡人：<span className="text-white font-bold">{familyContact.name}</span>。倒數結束前家屬未授權，將自動安全阻斷交易。
+                    已自動同步強行推播至預設聯絡人：<span className="text-white font-bold">{familyContact.name}</span> 的手機首頁與 App。
                   </p>
                 </>
               )}
@@ -229,87 +233,165 @@ export default function App() {
           )}
         </div>
 
-        {/* 右欄：家屬風控設定卡片 */}
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 flex flex-col justify-between shadow-xl relative overflow-hidden">
-          <div>
-            <div className="flex items-center justify-between mb-6">
-              <span className="flex items-center gap-2 text-emerald-400 text-sm font-semibold bg-emerald-950/60 px-3 py-1.5 rounded-full border border-emerald-800/50">
-                <Lock className="w-4 h-4" /> 家屬聯防門檻與快捷聯絡
-              </span>
-              <span className="text-xs text-emerald-400/80 font-mono">系統防護中</span>
-            </div>
+        {/* 右欄：家屬風控設定與手機首頁模擬 */}
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 flex flex-col justify-between shadow-xl relative overflow-hidden min-h-[460px]">
+          
+          {/* 💡 當處於【手機首頁】且【沒有預警】時顯示首頁介面 */}
+          {isHomeScreen && !isIntercepted ? (
+            <div className="flex flex-col justify-between h-full">
+              <div>
+                <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
+                  <span className="text-xs text-slate-400 font-mono">09:41 • 5G 100%</span>
+                  <span className="text-xs text-indigo-400 bg-indigo-950/60 px-2 py-0.5 rounded border border-indigo-800/40">
+                    模擬手機首頁狀態
+                  </span>
+                </div>
 
-            {/* 平時顯示之家屬聯絡資訊 */}
-            <div className="bg-slate-950 rounded-2xl p-4 border border-slate-800 mb-6">
-              <div className="text-xs text-slate-400 mb-2 flex items-center justify-between">
-                <span>設定指定緊急關懷家屬：</span>
-                <span className="text-emerald-400 font-bold">{familyContact.name}</span>
+                <div className="text-center my-4">
+                  <div className="text-3xl font-extrabold text-slate-200">09:41</div>
+                  <div className="text-xs text-slate-400">11月12日 星期四</div>
+                </div>
+
+                {/* 手機桌面的 App 圖示網格 */}
+                <div className="grid grid-cols-4 gap-4 my-6 px-2">
+                  <div className="flex flex-col items-center gap-1.5 cursor-pointer" onClick={() => setIsHomeScreen(false)}>
+                    <div className="p-3 bg-indigo-600 rounded-2xl text-white shadow-lg shadow-indigo-600/40">
+                      <ShieldCheck className="w-6 h-6" />
+                    </div>
+                    <span className="text-[10px] text-slate-300 font-medium">防詐安控</span>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="p-3 bg-green-600 rounded-2xl text-white">
+                      <MessageCircle className="w-6 h-6" />
+                    </div>
+                    <span className="text-[10px] text-slate-400">LINE</span>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="p-3 bg-blue-600 rounded-2xl text-white">
+                      <Mail className="w-6 h-6" />
+                    </div>
+                    <span className="text-[10px] text-slate-400">郵件</span>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="p-3 bg-amber-600 rounded-2xl text-white">
+                      <Calendar className="w-6 h-6" />
+                    </div>
+                    <span className="text-[10px] text-slate-400">行事曆</span>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="p-3 bg-purple-600 rounded-2xl text-white">
+                      <Camera className="w-6 h-6" />
+                    </div>
+                    <span className="text-[10px] text-slate-400">相機</span>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="p-3 bg-slate-700 rounded-2xl text-white">
+                      <Settings className="w-6 h-6" />
+                    </div>
+                    <span className="text-[10px] text-slate-400">設定</span>
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                <a
-                  href={`tel:${familyContact.phone}`}
-                  className="flex items-center justify-center gap-1.5 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-bold transition"
-                >
-                  <Phone className="w-3.5 h-3.5" /> 電話直連
-                </a>
-                <a
-                  href={`sms:${familyContact.phone}?body=【防詐警報】發起轉帳測試確認`}
-                  className="flex items-center justify-center gap-1.5 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-bold transition"
-                >
-                  <MessageSquare className="w-3.5 h-3.5" /> 發送簡訊
-                </a>
-                <a
-                  href={`https://line.me/R/ti/p/~${familyContact.lineId}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center justify-center gap-1.5 py-2 bg-green-600/20 hover:bg-green-600/30 text-green-300 border border-green-500/30 rounded-xl text-xs font-bold transition"
-                >
-                  <Send className="w-3.5 h-3.5" /> LINE 通知
-                </a>
+
+              <div className="text-center text-xs text-slate-500 pt-3 border-t border-slate-800">
+                點擊「防詐安控」Icon 可切換回設定頁；左端發起轉帳時將<span className="text-amber-400 font-bold">強行覆蓋警報</span>。
               </div>
             </div>
+          ) : (
+            /* 防詐 App 主頁介面 */
+            <>
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <span className="flex items-center gap-2 text-emerald-400 text-sm font-semibold bg-emerald-950/60 px-3 py-1.5 rounded-full border border-emerald-800/50">
+                    <Lock className="w-4 h-4" /> 家屬聯防門檻與快捷聯絡
+                  </span>
+                  {/* 💡 新增：返回手機首頁按鈕 */}
+                  <button
+                    onClick={() => setIsHomeScreen(true)}
+                    className="flex items-center gap-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-xl border border-slate-700 transition"
+                  >
+                    <Home className="w-3.5 h-3.5 text-indigo-400" /> 回手機首頁
+                  </button>
+                </div>
 
-            {/* 門檻設定 */}
-            <div className="mb-6">
-              <label className="block text-slate-400 text-sm mb-2">單筆攔截約定金額 (NT$)</label>
-              <div className="relative mb-4">
-                <input
-                  type="number"
-                  step="10000"
-                  min="10000"
-                  max="5000000"
-                  value={threshold}
-                  onChange={(e) => setThreshold(Math.max(0, Number(e.target.value)))}
-                  className="w-full bg-slate-950 border border-emerald-500/40 rounded-2xl px-4 py-3 text-xl font-mono text-emerald-400 font-bold focus:outline-none focus:border-emerald-400 transition"
-                  placeholder="請輸入門檻金額"
-                />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">
-                  自訂門檻
+                {/* 平時顯示之家屬聯絡資訊 */}
+                <div className="bg-slate-950 rounded-2xl p-4 border border-slate-800 mb-6">
+                  <div className="text-xs text-slate-400 mb-2 flex items-center justify-between">
+                    <span>設定指定緊急關懷家屬：</span>
+                    <span className="text-emerald-400 font-bold">{familyContact.name}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <a
+                      href={`tel:${familyContact.phone}`}
+                      className="flex items-center justify-center gap-1.5 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-bold transition"
+                    >
+                      <Phone className="w-3.5 h-3.5" /> 電話直連
+                    </a>
+                    <a
+                      href={`sms:${familyContact.phone}?body=【防詐警報】發起轉帳測試確認`}
+                      className="flex items-center justify-center gap-1.5 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-bold transition"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" /> 發送簡訊
+                    </a>
+                    <a
+                      href={`https://line.me/R/ti/p/~${familyContact.lineId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-center gap-1.5 py-2 bg-green-600/20 hover:bg-green-600/30 text-green-300 border border-green-500/30 rounded-xl text-xs font-bold transition"
+                    >
+                      <Send className="w-3.5 h-3.5" /> LINE 通知
+                    </a>
+                  </div>
+                </div>
+
+                {/* 門檻設定 */}
+                <div className="mb-6">
+                  <label className="block text-slate-400 text-sm mb-2">單筆攔截約定金額 (NT$)</label>
+                  <div className="relative mb-4">
+                    <input
+                      type="number"
+                      step="10000"
+                      min="10000"
+                      max="5000000"
+                      value={threshold}
+                      onChange={(e) => setThreshold(Math.max(0, Number(e.target.value)))}
+                      className="w-full bg-slate-950 border border-emerald-500/40 rounded-2xl px-4 py-3 text-xl font-mono text-emerald-400 font-bold focus:outline-none focus:border-emerald-400 transition"
+                      placeholder="請輸入門檻金額"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">
+                      自訂門檻
+                    </span>
+                  </div>
+
+                  <input
+                    type="range"
+                    min={100000}
+                    max={2000000}
+                    step={50000}
+                    value={threshold}
+                    onChange={(e) => setThreshold(Number(e.target.value))}
+                    className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                <span>音效權限狀態：</span>
+                <span className={`font-bold ${isAudioUnlocked ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  {isAudioUnlocked ? '● 警報已授權 (Audio Active)' : '○ 點擊螢幕進行授權'}
                 </span>
               </div>
+            </>
+          )}
 
-              <input
-                type="range"
-                min={100000}
-                max={2000000}
-                step={50000}
-                value={threshold}
-                onChange={(e) => setThreshold(Number(e.target.value))}
-                className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-              />
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-            <span>音效權限狀態：</span>
-            <span className={`font-bold ${isAudioUnlocked ? 'text-emerald-400' : 'text-amber-400'}`}>
-              {isAudioUnlocked ? '● 警報已授權 (Audio Active)' : '○ 點擊螢幕進行授權'}
-            </span>
-          </div>
-
-          {/* 🚨 右欄預警爆閃彈窗 (含【預警狀態下】快捷聯絡快捷鍵) */}
+          {/* 🚨 右欄預警爆閃彈窗 (即使處於【手機首頁】也會強制跳出覆蓋！) */}
           {isIntercepted && (
-            <div className={`absolute inset-0 z-30 p-6 flex flex-col justify-between text-center ${
+            <div className={`absolute inset-0 z-40 p-6 flex flex-col justify-between text-center ${
               isApproved 
                 ? 'bg-slate-900/95' 
                 : isTimeoutCancelled 
@@ -330,14 +412,14 @@ export default function App() {
 
                   {/* 託管倒數區 */}
                   <div className="bg-slate-950/90 border border-red-500/40 rounded-xl p-3">
-                    <div className="text-[11px] text-slate-400">家屬託管倒數中</div>
+                    <div className="text-[11px] text-slate-400">家屬託管倒數中（系統強行中斷手機畫面上推）</div>
                     <div className="text-3xl font-mono font-extrabold text-amber-400 my-0.5">
                       00:{countdown < 10 ? `0${countdown}` : countdown}
                     </div>
                     <div className="text-[10px] text-slate-400">倒數結束將自動阻斷交易</div>
                   </div>
 
-                  {/* 💡 預警狀態專屬：家屬即時快捷聯絡按鈕組 */}
+                  {/* 家屬即時快捷聯絡按鈕組 */}
                   <div className="bg-slate-900/80 border border-slate-700/60 rounded-xl p-2.5">
                     <div className="text-[11px] text-slate-300 mb-2 font-medium flex items-center justify-center gap-1">
                       <span>📞 快捷聯絡長輩/緊急聯絡人：</span>
