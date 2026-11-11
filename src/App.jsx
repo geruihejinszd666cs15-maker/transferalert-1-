@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShieldAlert, AlertTriangle, CheckCircle, Lock, Smartphone, RefreshCw, Volume2, ShieldCheck } from 'lucide-react';
+import { ShieldAlert, AlertTriangle, CheckCircle, Lock, Smartphone, RefreshCw, Volume2, ShieldCheck, Phone, MessageSquare, Send, XCircle } from 'lucide-react';
 
 export default function App() {
   // 狀態設定
@@ -10,6 +10,14 @@ export default function App() {
   const [isAudioUnlocked, setIsAudioUnlocked] = useState(false);
   const [isAlertPlaying, setIsAlertPlaying] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
+  const [isTimeoutCancelled, setIsTimeoutCancelled] = useState(false);
+
+  // 家屬緊急聯絡資訊 (模擬資料)
+  const familyContact = {
+    name: "張小明 (長子)",
+    phone: "0912345678",
+    lineId: "family_guard_line"
+  };
 
   // Web Audio API 警報聲生成器
   const audioCtxRef = useRef(null);
@@ -46,8 +54,8 @@ export default function App() {
       const gain = ctx.createGain();
 
       osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(880, ctx.currentTime); // A5 高音
-      osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.4); // 警報頻率下降
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.4);
 
       gain.gain.setValueAtTime(0.3, ctx.currentTime);
 
@@ -62,18 +70,20 @@ export default function App() {
     }
   };
 
-  // 倒數計時與阻斷觸發
+  // 倒數計時與逾時未回應處理
   useEffect(() => {
     let timer;
-    if (isIntercepted && countdown > 0 && !isApproved) {
+    if (isIntercepted && countdown > 0 && !isApproved && !isTimeoutCancelled) {
       timer = setInterval(() => {
         setCountdown((prev) => prev - 1);
       }, 1000);
-    } else if (countdown === 0) {
+    } else if (countdown === 0 && isIntercepted && !isApproved) {
+      // 逾時未回應：自動取消該筆交易（不封鎖帳戶）
       triggerAlarm(false);
+      setIsTimeoutCancelled(true);
     }
     return () => clearInterval(timer);
-  }, [isIntercepted, countdown, isApproved]);
+  }, [isIntercepted, countdown, isApproved, isTimeoutCancelled]);
 
   // 執行模擬轉帳
   const handleTransfer = () => {
@@ -83,6 +93,7 @@ export default function App() {
       setIsIntercepted(true);
       setCountdown(30);
       setIsApproved(false);
+      setIsTimeoutCancelled(false);
       triggerAlarm(true);
       if (navigator.vibrate) {
         navigator.vibrate([500, 200, 500, 200, 1000]);
@@ -97,13 +108,14 @@ export default function App() {
     triggerAlarm(false);
     setIsIntercepted(false);
     setIsApproved(false);
+    setIsTimeoutCancelled(false);
     setCountdown(30);
   };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between p-4 md:p-8 relative overflow-hidden font-sans">
       
-      {/* 📱 1. 行動裝置解鎖音效提示蓋板 (包含微縮提示小字) */}
+      {/* 📱 1. 行動裝置解鎖音效提示蓋板 */}
       {!isAudioUnlocked && (
         <div 
           onClick={handleUnlockAudio}
@@ -125,68 +137,6 @@ export default function App() {
         </div>
       )}
 
-      {/* 🚨 2. 全螢幕爆閃警報彈窗 */}
-      {isIntercepted && (
-        <div className={`fixed inset-0 z-40 flex flex-col items-center justify-center p-6 text-center ${
-          isApproved ? 'bg-slate-900/95' : 'bg-red-950/95 animate-pulse'
-        }`}>
-          <div className="max-w-2xl w-full bg-slate-900/90 border-2 border-red-500/50 rounded-3xl p-8 shadow-2xl backdrop-blur-xl">
-            {!isApproved ? (
-              <>
-                <div className="inline-flex p-4 bg-red-600/20 rounded-full text-red-500 mb-4 animate-bounce">
-                  <ShieldAlert className="w-20 h-20" />
-                </div>
-                <h2 className="text-3xl md:text-5xl font-black text-red-500 mb-2">高風險異常轉帳已被阻斷！</h2>
-                <p className="text-slate-300 text-lg md:text-xl mb-6">
-                  偵測到單筆轉帳金額 <span className="text-amber-400 font-bold underline">NT$ {transferAmount.toLocaleString()}</span> 超過家族設定門檻！
-                </p>
-
-                {/* 倒數託管區 */}
-                <div className="bg-slate-800/80 border border-slate-700 rounded-2xl p-6 mb-8">
-                  <div className="text-slate-400 text-sm md:text-base mb-1">30秒家屬聯防託管倒數中</div>
-                  <div className="text-5xl md:text-7xl font-mono font-extrabold text-amber-400 my-2">
-                    00:{countdown < 10 ? `0${countdown}` : countdown}
-                  </div>
-                  <p className="text-xs md:text-sm text-slate-400">已向長輩指定關懷家屬手機發出「地震級特快即時推播」</p>
-                </div>
-
-                {/* 按鈕組 */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <button
-                    onClick={() => {
-                      setIsApproved(true);
-                      triggerAlarm(false);
-                    }}
-                    className="py-4 px-6 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-lg rounded-xl shadow-lg transition"
-                  >
-                    關懷家屬：確認安全放行
-                  </button>
-                  <button
-                    onClick={handleReset}
-                    className="py-4 px-6 bg-red-600 hover:bg-red-500 text-white font-bold text-lg rounded-xl shadow-lg transition"
-                  >
-                    立即終止並鎖定帳戶
-                  </button>
-                </div>
-              </>
-            ) : (
-              /* 家屬放行後狀態 */
-              <div className="py-8">
-                <CheckCircle className="w-24 h-24 text-emerald-400 mx-auto mb-4" />
-                <h2 className="text-3xl font-bold text-emerald-400 mb-2">授權完成，轉帳已安全放行</h2>
-                <p className="text-slate-300 text-lg mb-8">家屬已進行二階段驗證，該筆交易記錄已加密歸檔。</p>
-                <button
-                  onClick={handleReset}
-                  className="py-3 px-8 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl transition"
-                >
-                  返回模擬主介面
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* HEADER */}
       <header className="max-w-6xl mx-auto w-full flex items-center justify-between pb-6 border-b border-slate-800">
         <div className="flex items-center gap-3">
@@ -195,7 +145,7 @@ export default function App() {
           </div>
           <div>
             <h1 className="text-xl md:text-2xl font-black text-white">家庭防詐即時風控模擬器</h1>
-            <p className="text-xs md:text-sm text-slate-400">Family Transfer Anti-Fraud Guard • 跨裝置展演版</p>
+            <p className="text-xs md:text-sm text-slate-400">Family Transfer Anti-Fraud Guard • 雙端協同展示版</p>
           </div>
         </div>
         <button
@@ -206,11 +156,11 @@ export default function App() {
         </button>
       </header>
 
-      {/* MAIN CONTENT (RWD 雙欄/單欄佈局) */}
+      {/* MAIN CONTENT (RWD 雙欄雙端聯動) */}
       <main className="max-w-6xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-6 my-auto py-6">
         
-        {/* 左欄：長輩轉帳模擬卡片 */}
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 flex flex-col justify-between shadow-xl">
+        {/* 左欄：長輩轉帳模擬卡片 (預警時僅顯示：正在通知緊急聯絡人) */}
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 flex flex-col justify-between shadow-xl relative overflow-hidden">
           <div>
             <div className="flex items-center justify-between mb-6">
               <span className="flex items-center gap-2 text-indigo-400 text-sm font-semibold bg-indigo-950/60 px-3 py-1.5 rounded-full border border-indigo-800/50">
@@ -223,9 +173,10 @@ export default function App() {
               <label className="block text-slate-400 text-sm mb-2">輸入轉帳金額 (NT$)</label>
               <input
                 type="number"
+                disabled={isIntercepted}
                 value={transferAmount}
                 onChange={(e) => setTransferAmount(Number(e.target.value))}
-                className="w-full bg-slate-950 border border-slate-700 rounded-2xl px-4 py-3.5 text-2xl font-mono text-white focus:outline-none focus:border-indigo-500"
+                className="w-full bg-slate-950 border border-slate-700 rounded-2xl px-4 py-3.5 text-2xl font-mono text-white focus:outline-none focus:border-indigo-500 disabled:opacity-50"
               />
             </div>
 
@@ -234,11 +185,12 @@ export default function App() {
               {[100000, 600000, 1200000].map((amt) => (
                 <button
                   key={amt}
+                  disabled={isIntercepted}
                   onClick={() => setTransferAmount(amt)}
                   className={`py-2 px-3 rounded-xl text-xs font-mono border transition ${
                     transferAmount === amt
                       ? 'bg-indigo-600 text-white border-indigo-500'
-                      : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+                      : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 disabled:opacity-50'
                   }`}
                 >
                   NT$ {(amt / 10000).toFixed(0)} 萬
@@ -247,28 +199,82 @@ export default function App() {
             </div>
           </div>
 
-          <button
-            onClick={handleTransfer}
-            className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-lg rounded-2xl shadow-lg shadow-indigo-600/30 active:scale-[0.98] transition"
-          >
-            發送轉帳請求
-          </button>
+          {/* 長輩端狀態替換顯示 */}
+          {isIntercepted ? (
+            <div className="bg-indigo-950/80 border border-indigo-500/50 rounded-2xl p-5 space-y-3 animate-pulse">
+              {isApproved ? (
+                <div className="text-emerald-400 font-bold flex items-center gap-2 text-base">
+                  <CheckCircle className="w-5 h-5 shrink-0" /> 家屬已授權放行，轉帳處理中...
+                </div>
+              ) : isTimeoutCancelled ? (
+                <div className="text-slate-300 font-bold flex items-center gap-2 text-base">
+                  <XCircle className="w-5 h-5 text-amber-400 shrink-0" /> 逾時未回應，已自動安全取消該筆交易
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3 text-amber-400 font-bold text-base">
+                    <ShieldAlert className="w-6 h-6 animate-spin shrink-0" />
+                    已觸發風控託管，正在通知緊急聯絡人...
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    已自動同步推播至預設聯絡人：<span className="text-white font-bold">{familyContact.name}</span>。倒數結束前家屬未授權，將自動安全阻斷交易。
+                  </p>
+                </>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={handleTransfer}
+              className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-lg rounded-2xl shadow-lg shadow-indigo-600/30 active:scale-[0.98] transition"
+            >
+              發送轉帳請求
+            </button>
+          )}
         </div>
 
-        {/* 右欄：家屬風控規則設定卡片 (手動輸入與滑桿連動) */}
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 flex flex-col justify-between shadow-xl">
+        {/* 右欄：家屬風控與快捷聯絡卡片 (預警爆閃與快聯機能) */}
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 flex flex-col justify-between shadow-xl relative overflow-hidden">
           <div>
             <div className="flex items-center justify-between mb-6">
               <span className="flex items-center gap-2 text-emerald-400 text-sm font-semibold bg-emerald-950/60 px-3 py-1.5 rounded-full border border-emerald-800/50">
-                <Lock className="w-4 h-4" /> 家屬聯防門檻設定
+                <Lock className="w-4 h-4" /> 家屬聯防門檻與快捷聯絡
               </span>
               <span className="text-xs text-emerald-400/80 font-mono">系統防護中</span>
             </div>
 
+            {/* 🚨 家屬快捷聯絡模組 */}
+            <div className="bg-slate-950 rounded-2xl p-4 border border-slate-800 mb-6">
+              <div className="text-xs text-slate-400 mb-2 flex items-center justify-between">
+                <span>設定指定緊急關懷家屬：</span>
+                <span className="text-emerald-400 font-bold">{familyContact.name}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <a
+                  href={`tel:${familyContact.phone}`}
+                  className="flex items-center justify-center gap-1.5 py-2.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-bold transition"
+                >
+                  <Phone className="w-3.5 h-3.5" /> 電話直連
+                </a>
+                <a
+                  href={`sms:${familyContact.phone}?body=【防詐警報】偵測到長輩轉帳異常，請開啟App確認`}
+                  className="flex items-center justify-center gap-1.5 py-2.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-bold transition"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" /> 發送簡訊
+                </a>
+                <a
+                  href={`https://line.me/R/ti/p/~${familyContact.lineId}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-center gap-1.5 py-2.5 bg-green-600/20 hover:bg-green-600/30 text-green-300 border border-green-500/30 rounded-xl text-xs font-bold transition"
+                >
+                  <Send className="w-3.5 h-3.5" /> LINE 通知
+                </a>
+              </div>
+            </div>
+
+            {/* 門檻設定與滑桿 */}
             <div className="mb-6">
               <label className="block text-slate-400 text-sm mb-2">單筆攔截約定金額 (NT$)</label>
-
-              {/* 手動輸入框 */}
               <div className="relative mb-4">
                 <input
                   type="number"
@@ -281,11 +287,10 @@ export default function App() {
                   placeholder="請輸入門檻金額"
                 />
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">
-                  自訂約定金額
+                  自訂門檻
                 </span>
               </div>
 
-              {/* 滑桿輔助微調 */}
               <input
                 type="range"
                 min={100000}
@@ -295,30 +300,86 @@ export default function App() {
                 onChange={(e) => setThreshold(Number(e.target.value))}
                 className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
               />
-              <div className="flex justify-between text-xs text-slate-500 mt-2 font-mono">
-                <span>10萬</span>
-                <span>100萬</span>
-                <span>200萬</span>
-              </div>
-            </div>
-
-            {/* 風控狀態說明 */}
-            <div className="bg-slate-950 rounded-2xl p-4 border border-slate-800 space-y-3">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  高於 <span className="text-emerald-400 font-bold">NT$ {threshold.toLocaleString()}</span> 之轉帳，將觸發 30 秒風控託管並自動發送全螢幕爆閃警報。
-                </p>
-              </div>
             </div>
           </div>
 
-          <div className="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+          <div className="pt-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
             <span>音效權限狀態：</span>
             <span className={`font-bold ${isAudioUnlocked ? 'text-emerald-400' : 'text-amber-400'}`}>
               {isAudioUnlocked ? '● 警報已授權 (Audio Active)' : '○ 點擊螢幕進行授權'}
             </span>
           </div>
+
+          {/* 🚨 家屬端專屬爆閃預警覆蓋視窗 (僅在右欄跳出) */}
+          {isIntercepted && (
+            <div className={`absolute inset-0 z-30 p-6 flex flex-col justify-between text-center ${
+              isApproved 
+                ? 'bg-slate-900/95' 
+                : isTimeoutCancelled 
+                ? 'bg-slate-900/95'
+                : 'bg-red-950/95 animate-pulse border-4 border-red-600'
+            }`}>
+              {!isApproved && !isTimeoutCancelled ? (
+                <div className="my-auto">
+                  <div className="inline-flex p-3 bg-red-600/20 rounded-full text-red-500 mb-2 animate-bounce">
+                    <ShieldAlert className="w-12 h-12" />
+                  </div>
+                  <h3 className="text-xl font-black text-red-500 mb-1">高風險異常轉帳觸發！</h3>
+                  <p className="text-xs text-slate-300 mb-4">
+                    長輩請求轉帳 <span className="text-amber-400 font-bold">NT$ {transferAmount.toLocaleString()}</span>
+                  </p>
+
+                  <div className="bg-slate-950 border border-red-500/40 rounded-xl p-4 mb-4">
+                    <div className="text-xs text-slate-400">家屬聯防託管剩餘時間</div>
+                    <div className="text-4xl font-mono font-extrabold text-amber-400 my-1">
+                      00:{countdown < 10 ? `0${countdown}` : countdown}
+                    </div>
+                    <div className="text-[10px] text-slate-400">若倒數結束未確認，將自動取消該筆交易</div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => {
+                        setIsApproved(true);
+                        triggerAlarm(false);
+                      }}
+                      className="py-3 px-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow transition"
+                    >
+                      確認安全放行
+                    </button>
+                    <button
+                      onClick={() => {
+                        triggerAlarm(false);
+                        setIsIntercepted(false);
+                        alert("已阻斷該筆轉帳交易（帳戶安全未受封鎖）。");
+                      }}
+                      className="py-3 px-2 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl shadow transition"
+                    >
+                      阻斷該筆交易
+                    </button>
+                  </div>
+                </div>
+              ) : isApproved ? (
+                <div className="my-auto py-4">
+                  <CheckCircle className="w-16 h-16 text-emerald-400 mx-auto mb-2" />
+                  <h3 className="text-lg font-bold text-emerald-400 mb-1">交易已放行</h3>
+                  <p className="text-xs text-slate-400 mb-4">家屬已進行雙重驗證放行此筆交易。</p>
+                  <button onClick={handleReset} className="py-2 px-6 bg-slate-800 text-xs text-white rounded-xl">
+                    重置模擬
+                  </button>
+                </div>
+              ) : (
+                <div className="my-auto py-4">
+                  <XCircle className="w-16 h-16 text-amber-400 mx-auto mb-2" />
+                  <h3 className="text-lg font-bold text-amber-400 mb-1">交易已逾時自動取消</h3>
+                  <p className="text-xs text-slate-400 mb-4">由於未在 30 秒內確認，系統已保護資金安全並取消轉帳。</p>
+                  <button onClick={handleReset} className="py-2 px-6 bg-slate-800 text-xs text-white rounded-xl">
+                    返回主頁
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
       </main>
