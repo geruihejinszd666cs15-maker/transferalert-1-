@@ -78,7 +78,6 @@ export default function App() {
         setCountdown((prev) => prev - 1);
       }, 1000);
     } else if (countdown === 0 && isIntercepted && !isApproved) {
-      // 逾時未回應：自動取消該筆交易（不封鎖帳戶）
       triggerAlarm(false);
       setIsTimeoutCancelled(true);
     }
@@ -156,10 +155,10 @@ export default function App() {
         </button>
       </header>
 
-      {/* MAIN CONTENT (RWD 雙欄雙端聯動) */}
+      {/* MAIN CONTENT */}
       <main className="max-w-6xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-6 my-auto py-6">
         
-        {/* 左欄：長輩轉帳模擬卡片 (預警時僅顯示：正在通知緊急聯絡人) */}
+        {/* 左欄：長輩轉帳模擬卡片 */}
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 flex flex-col justify-between shadow-xl relative overflow-hidden">
           <div>
             <div className="flex items-center justify-between mb-6">
@@ -180,7 +179,6 @@ export default function App() {
               />
             </div>
 
-            {/* 快速金額選擇 */}
             <div className="grid grid-cols-3 gap-2 mb-6">
               {[100000, 600000, 1200000].map((amt) => (
                 <button
@@ -199,7 +197,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* 長輩端狀態替換顯示 */}
           {isIntercepted ? (
             <div className="bg-indigo-950/80 border border-indigo-500/50 rounded-2xl p-5 space-y-3 animate-pulse">
               {isApproved ? (
@@ -232,7 +229,7 @@ export default function App() {
           )}
         </div>
 
-        {/* 右欄：家屬風控與快捷聯絡卡片 (預警爆閃與快聯機能) */}
+        {/* 右欄：家屬風控設定卡片 */}
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 flex flex-col justify-between shadow-xl relative overflow-hidden">
           <div>
             <div className="flex items-center justify-between mb-6">
@@ -242,7 +239,7 @@ export default function App() {
               <span className="text-xs text-emerald-400/80 font-mono">系統防護中</span>
             </div>
 
-            {/* 🚨 家屬快捷聯絡模組 */}
+            {/* 平時顯示之家屬聯絡資訊 */}
             <div className="bg-slate-950 rounded-2xl p-4 border border-slate-800 mb-6">
               <div className="text-xs text-slate-400 mb-2 flex items-center justify-between">
                 <span>設定指定緊急關懷家屬：</span>
@@ -251,13 +248,13 @@ export default function App() {
               <div className="grid grid-cols-3 gap-2">
                 <a
                   href={`tel:${familyContact.phone}`}
-                  className="flex items-center justify-center gap-1.5 py-2.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-bold transition"
+                  className="flex items-center justify-center gap-1.5 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-bold transition"
                 >
                   <Phone className="w-3.5 h-3.5" /> 電話直連
                 </a>
                 <a
-                  href={`sms:${familyContact.phone}?body=【防詐警報】偵測到長輩轉帳異常，請開啟App確認`}
-                  className="flex items-center justify-center gap-1.5 py-2.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-bold transition"
+                  href={`sms:${familyContact.phone}?body=【防詐警報】發起轉帳測試確認`}
+                  className="flex items-center justify-center gap-1.5 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-bold transition"
                 >
                   <MessageSquare className="w-3.5 h-3.5" /> 發送簡訊
                 </a>
@@ -265,14 +262,14 @@ export default function App() {
                   href={`https://line.me/R/ti/p/~${familyContact.lineId}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center justify-center gap-1.5 py-2.5 bg-green-600/20 hover:bg-green-600/30 text-green-300 border border-green-500/30 rounded-xl text-xs font-bold transition"
+                  className="flex items-center justify-center gap-1.5 py-2 bg-green-600/20 hover:bg-green-600/30 text-green-300 border border-green-500/30 rounded-xl text-xs font-bold transition"
                 >
                   <Send className="w-3.5 h-3.5" /> LINE 通知
                 </a>
               </div>
             </div>
 
-            {/* 門檻設定與滑桿 */}
+            {/* 門檻設定 */}
             <div className="mb-6">
               <label className="block text-slate-400 text-sm mb-2">單筆攔截約定金額 (NT$)</label>
               <div className="relative mb-4">
@@ -310,7 +307,7 @@ export default function App() {
             </span>
           </div>
 
-          {/* 🚨 家屬端專屬爆閃預警覆蓋視窗 (僅在右欄跳出) */}
+          {/* 🚨 右欄預警爆閃彈窗 (含【預警狀態下】快捷聯絡快捷鍵) */}
           {isIntercepted && (
             <div className={`absolute inset-0 z-30 p-6 flex flex-col justify-between text-center ${
               isApproved 
@@ -320,30 +317,64 @@ export default function App() {
                 : 'bg-red-950/95 animate-pulse border-4 border-red-600'
             }`}>
               {!isApproved && !isTimeoutCancelled ? (
-                <div className="my-auto">
-                  <div className="inline-flex p-3 bg-red-600/20 rounded-full text-red-500 mb-2 animate-bounce">
-                    <ShieldAlert className="w-12 h-12" />
+                <div className="my-auto space-y-3">
+                  <div className="inline-flex p-2.5 bg-red-600/20 rounded-full text-red-500 animate-bounce">
+                    <ShieldAlert className="w-10 h-10" />
                   </div>
-                  <h3 className="text-xl font-black text-red-500 mb-1">高風險異常轉帳觸發！</h3>
-                  <p className="text-xs text-slate-300 mb-4">
-                    長輩請求轉帳 <span className="text-amber-400 font-bold">NT$ {transferAmount.toLocaleString()}</span>
-                  </p>
+                  <div>
+                    <h3 className="text-xl font-black text-red-500">高風險異常轉帳觸發！</h3>
+                    <p className="text-xs text-slate-300">
+                      長輩請求轉帳 <span className="text-amber-400 font-bold">NT$ {transferAmount.toLocaleString()}</span>
+                    </p>
+                  </div>
 
-                  <div className="bg-slate-950 border border-red-500/40 rounded-xl p-4 mb-4">
-                    <div className="text-xs text-slate-400">家屬聯防託管剩餘時間</div>
-                    <div className="text-4xl font-mono font-extrabold text-amber-400 my-1">
+                  {/* 託管倒數區 */}
+                  <div className="bg-slate-950/90 border border-red-500/40 rounded-xl p-3">
+                    <div className="text-[11px] text-slate-400">家屬託管倒數中</div>
+                    <div className="text-3xl font-mono font-extrabold text-amber-400 my-0.5">
                       00:{countdown < 10 ? `0${countdown}` : countdown}
                     </div>
-                    <div className="text-[10px] text-slate-400">若倒數結束未確認，將自動取消該筆交易</div>
+                    <div className="text-[10px] text-slate-400">倒數結束將自動阻斷交易</div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
+                  {/* 💡 預警狀態專屬：家屬即時快捷聯絡按鈕組 */}
+                  <div className="bg-slate-900/80 border border-slate-700/60 rounded-xl p-2.5">
+                    <div className="text-[11px] text-slate-300 mb-2 font-medium flex items-center justify-center gap-1">
+                      <span>📞 快捷聯絡長輩/緊急聯絡人：</span>
+                      <span className="text-emerald-400 font-bold">{familyContact.name}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      <a
+                        href={`tel:${familyContact.phone}`}
+                        className="flex items-center justify-center gap-1 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-bold shadow transition"
+                      >
+                        <Phone className="w-3 h-3" /> 打電話
+                      </a>
+                      <a
+                        href={`sms:${familyContact.phone}?body=【緊急防詐】您發起了高額轉帳 NT$${transferAmount.toLocaleString()}，請問是否為本人操作？`}
+                        className="flex items-center justify-center gap-1 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[11px] font-bold shadow transition"
+                      >
+                        <MessageSquare className="w-3 h-3" /> 傳簡訊
+                      </a>
+                      <a
+                        href={`https://line.me/R/ti/p/~${familyContact.lineId}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center justify-center gap-1 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded-lg text-[11px] font-bold shadow transition"
+                      >
+                        <Send className="w-3 h-3" /> LINE 聯絡
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* 審核處置按鈕組 */}
+                  <div className="grid grid-cols-2 gap-2 pt-1">
                     <button
                       onClick={() => {
                         setIsApproved(true);
                         triggerAlarm(false);
                       }}
-                      className="py-3 px-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow transition"
+                      className="py-2.5 px-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow transition"
                     >
                       確認安全放行
                     </button>
@@ -353,7 +384,7 @@ export default function App() {
                         setIsIntercepted(false);
                         alert("已阻斷該筆轉帳交易（帳戶安全未受封鎖）。");
                       }}
-                      className="py-3 px-2 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl shadow transition"
+                      className="py-2.5 px-2 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl shadow transition"
                     >
                       阻斷該筆交易
                     </button>
