@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShieldAlert, AlertTriangle, CheckCircle2, Lock, Smartphone, RefreshCw, Volume2, ShieldCheck } from 'lucide-react';
+import { ShieldAlert, AlertTriangle, CheckCircle, Lock, Smartphone, RefreshCw, Volume2, ShieldCheck } from 'lucide-react';
 
 export default function App() {
   // 狀態設定
@@ -103,7 +103,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between p-4 md:p-8 relative overflow-hidden font-sans">
       
-      {/* 📱 1. 行動裝置解鎖音效提示蓋板 */}
+      {/* 📱 1. 行動裝置解鎖音效提示蓋板 (包含微縮提示小字) */}
       {!isAudioUnlocked && (
         <div 
           onClick={handleUnlockAudio}
@@ -116,9 +116,12 @@ export default function App() {
           <p className="text-slate-300 text-lg md:text-xl max-w-lg mb-8">
             為突破平板/手機瀏覽器音效限制，請點擊一次螢幕授權「地震級防詐警報音效」與互動體驗。
           </p>
-          <span className="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white text-xl font-bold rounded-2xl shadow-lg shadow-indigo-500/30">
+          <span className="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white text-xl font-bold rounded-2xl shadow-lg shadow-indigo-500/30 mb-4">
             開啟 Demo 模式
           </span>
+          <p className="text-xs md:text-sm text-slate-400/90 font-normal tracking-wide">
+            💡 評審體驗提示：請先輕點一次畫面授權音效存取權限，以獲得最佳爆閃警報與聲音效果
+          </p>
         </div>
       )}
 
@@ -169,7 +172,7 @@ export default function App() {
             ) : (
               /* 家屬放行後狀態 */
               <div className="py-8">
-                <CheckCircle2 className="w-24 h-24 text-emerald-400 mx-auto mb-4" />
+                <CheckCircle className="w-24 h-24 text-emerald-400 mx-auto mb-4" />
                 <h2 className="text-3xl font-bold text-emerald-400 mb-2">授權完成，轉帳已安全放行</h2>
                 <p className="text-slate-300 text-lg mb-8">家屬已進行二階段驗證，該筆交易記錄已加密歸檔。</p>
                 <button
@@ -252,7 +255,7 @@ export default function App() {
           </button>
         </div>
 
-        {/* 右欄：家屬風控規則設定卡片 */}
+        {/* 右欄：家屬風控規則設定卡片 (手動輸入與滑桿連動) */}
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 flex flex-col justify-between shadow-xl">
           <div>
             <div className="flex items-center justify-between mb-6">
@@ -263,12 +266,26 @@ export default function App() {
             </div>
 
             <div className="mb-6">
-              <div className="flex justify-between items-center mb-2">
-                <label className="text-slate-400 text-sm">單筆攔截門檻</label>
-                <span className="text-emerald-400 font-mono font-bold text-lg">
-                  NT$ {threshold.toLocaleString()}
+              <label className="block text-slate-400 text-sm mb-2">單筆攔截約定金額 (NT$)</label>
+
+              {/* 手動輸入框 */}
+              <div className="relative mb-4">
+                <input
+                  type="number"
+                  step="10000"
+                  min="10000"
+                  max="5000000"
+                  value={threshold}
+                  onChange={(e) => setThreshold(Math.max(0, Number(e.target.value)))}
+                  className="w-full bg-slate-950 border border-emerald-500/40 rounded-2xl px-4 py-3 text-xl font-mono text-emerald-400 font-bold focus:outline-none focus:border-emerald-400 transition"
+                  placeholder="請輸入門檻金額"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">
+                  自訂約定金額
                 </span>
               </div>
+
+              {/* 滑桿輔助微調 */}
               <input
                 type="range"
                 min={100000}
