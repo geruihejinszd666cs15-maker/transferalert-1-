@@ -12,7 +12,7 @@ export default function App() {
   const [isApproved, setIsApproved] = useState(false);
   const [isTimeoutCancelled, setIsTimeoutCancelled] = useState(false);
   
-  // 💡 新增：家屬端是否處於「手機首頁」狀態
+  // 家屬端是否處於「手機首頁」狀態
   const [isHomeScreen, setIsHomeScreen] = useState(false);
 
   // 家屬緊急聯絡資訊 (模擬資料)
@@ -20,6 +20,13 @@ export default function App() {
     name: "張小明 (長子)",
     phone: "0912345678",
     lineId: "family_guard_line"
+  };
+
+  // 千分位數字解析輔助函式
+  const handleFormattedNumberChange = (rawValue, setter, maxLimit = 100000000) => {
+    const numericString = rawValue.replace(/[^0-9]/g, '');
+    const parsed = numericString === '' ? 0 : Math.min(maxLimit, Number(numericString));
+    setter(parsed);
   };
 
   // Web Audio API 警報聲生成器
@@ -175,10 +182,12 @@ export default function App() {
             <div className="mb-6">
               <label className="block text-slate-400 text-sm mb-2">輸入轉帳金額 (NT$)</label>
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
                 disabled={isIntercepted}
-                value={transferAmount}
-                onChange={(e) => setTransferAmount(Number(e.target.value))}
+                value={transferAmount === 0 ? '' : transferAmount.toLocaleString()}
+                onChange={(e) => handleFormattedNumberChange(e.target.value, setTransferAmount)}
+                placeholder="0"
                 className="w-full bg-slate-950 border border-slate-700 rounded-2xl px-4 py-3.5 text-2xl font-mono text-white focus:outline-none focus:border-indigo-500 disabled:opacity-50"
               />
             </div>
@@ -236,7 +245,7 @@ export default function App() {
         {/* 右欄：家屬風控設定與手機首頁模擬 */}
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 flex flex-col justify-between shadow-xl relative overflow-hidden min-h-[460px]">
           
-          {/* 💡 當處於【手機首頁】且【沒有預警】時顯示首頁介面 */}
+          {/* 當處於【手機首頁】且【沒有預警】時顯示首頁介面 */}
           {isHomeScreen && !isIntercepted ? (
             <div className="flex flex-col justify-between h-full">
               <div>
@@ -310,7 +319,6 @@ export default function App() {
                   <span className="flex items-center gap-2 text-emerald-400 text-sm font-semibold bg-emerald-950/60 px-3 py-1.5 rounded-full border border-emerald-800/50">
                     <Lock className="w-4 h-4" /> 家屬聯防門檻與快捷聯絡
                   </span>
-                  {/* 💡 新增：返回手機首頁按鈕 */}
                   <button
                     onClick={() => setIsHomeScreen(true)}
                     className="flex items-center gap-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-xl border border-slate-700 transition"
@@ -349,34 +357,40 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* 門檻設定 */}
+                {/* 門檻設定 (1萬 ~ 300萬 + 千分位逗號) */}
                 <div className="mb-6">
                   <label className="block text-slate-400 text-sm mb-2">單筆攔截約定金額 (NT$)</label>
                   <div className="relative mb-4">
                     <input
-                      type="number"
-                      step="10000"
-                      min="10000"
-                      max="5000000"
-                      value={threshold}
-                      onChange={(e) => setThreshold(Math.max(0, Number(e.target.value)))}
+                      type="text"
+                      inputMode="numeric"
+                      value={threshold === 0 ? '' : threshold.toLocaleString()}
+                      onChange={(e) => handleFormattedNumberChange(e.target.value, setThreshold, 3000000)}
+                      onBlur={() => {
+                        if (threshold < 10000) setThreshold(10000);
+                      }}
                       className="w-full bg-slate-950 border border-emerald-500/40 rounded-2xl px-4 py-3 text-xl font-mono text-emerald-400 font-bold focus:outline-none focus:border-emerald-400 transition"
-                      placeholder="請輸入門檻金額"
+                      placeholder="10,000 ~ 3,000,000"
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">
-                      自訂門檻
+                      1萬 ~ 300萬
                     </span>
                   </div>
 
                   <input
                     type="range"
-                    min={100000}
-                    max={2000000}
-                    step={50000}
-                    value={threshold}
+                    min={10000}
+                    max={3000000}
+                    step={10000}
+                    value={Math.min(3000000, Math.max(10000, threshold))}
                     onChange={(e) => setThreshold(Number(e.target.value))}
                     className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                   />
+                  <div className="flex justify-between text-xs text-slate-500 mt-2 font-mono">
+                    <span>1萬</span>
+                    <span>150萬</span>
+                    <span>300萬</span>
+                  </div>
                 </div>
               </div>
 
@@ -389,7 +403,7 @@ export default function App() {
             </>
           )}
 
-          {/* 🚨 右欄預警爆閃彈窗 (即使處於【手機首頁】也會強制跳出覆蓋！) */}
+          {/* 🚨 右欄預警爆閃彈窗 */}
           {isIntercepted && (
             <div className={`absolute inset-0 z-40 p-6 flex flex-col justify-between text-center ${
               isApproved 
