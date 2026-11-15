@@ -192,8 +192,9 @@ export default function App() {
               />
             </div>
 
+            {/* 快速金額選擇：1萬、60萬、120萬、180萬、240萬、300萬 */}
             <div className="grid grid-cols-3 gap-2 mb-6">
-              {[100000, 600000, 1200000].map((amt) => (
+              {[10000, 600000, 1200000, 1800000, 2400000, 3000000].map((amt) => (
                 <button
                   key={amt}
                   disabled={isIntercepted}
