@@ -1,39 +1,79 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShieldAlert, AlertTriangle, CheckCircle, Lock, Smartphone, RefreshCw, Volume2, ShieldCheck, Phone, MessageSquare, Send, XCircle, Home, Mail, Calendar, Camera, Settings, MessageCircle } from 'lucide-react';
+import { ShieldAlert, CheckCircle, Lock, Smartphone, RefreshCw, Volume2, ShieldCheck, Phone, MessageSquare, Send, XCircle, Home, Mail, Calendar, Camera, Settings, MessageCircle, Users } from 'lucide-react';
 
 export default function App() {
-  // 狀態設定
+  // 多長輩帳號預設資料 (支援一對多獨立門檻與聯絡資訊)
+  const [elders, setElders] = useState([
+    {
+      id: 'dad',
+      label: '👨 爸爸 (王大明)',
+      name: '王大明 (爸爸)',
+      bank: '台灣銀行 (004) •••• 8821',
+      phone: '0912345678',
+      lineId: 'dad_guard_line',
+      threshold: 500000,
+    },
+    {
+      id: 'mom',
+      label: '👩 媽媽 (李美華)',
+      name: '李美華 (媽媽)',
+      bank: '國泰世華 (013) •••• 3390',
+      phone: '0987654321',
+      lineId: 'mom_guard_line',
+      threshold: 100000,
+    },
+    {
+      id: 'grandma',
+      label: '👵 祖母 (陳秀英)',
+      name: '陳秀英 (祖母)',
+      bank: '中華郵政 (700) •••• 5104',
+      phone: '0922334455',
+      lineId: 'grandma_guard_line',
+      threshold: 50000,
+    },
+  ]);
+
+  // 當前操作的長輩 ID (左側轉帳端) 與 當前檢視設定的長輩 ID (右側家屬端)
+  const [activeElderId, setActiveElderId] = useState('dad');
+  const [managingElderId, setManagingElderId] = useState('dad');
+
+  const activeElder = elders.find((e) => e.id === activeElderId) || elders[0];
+  const managingElder = elders.find((e) => e.id === managingElderId) || elders[0];
+
+  // 交易與預警狀態
   const [transferAmount, setTransferAmount] = useState(600000);
-  const [threshold, setThreshold] = useState(500000);
   const [isIntercepted, setIsIntercepted] = useState(false);
+  const [interceptedElderId, setInterceptedElderId] = useState(null);
   const [countdown, setCountdown] = useState(30);
   const [isAudioUnlocked, setIsAudioUnlocked] = useState(false);
   const [isAlertPlaying, setIsAlertPlaying] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
   const [isTimeoutCancelled, setIsTimeoutCancelled] = useState(false);
-  
-  // 家屬端是否處於「手機首頁」狀態
   const [isHomeScreen, setIsHomeScreen] = useState(false);
 
-  // 家屬緊急聯絡資訊 (模擬資料)
-  const familyContact = {
-    name: "張小明 (長子)",
-    phone: "0912345678",
-    lineId: "family_guard_line"
+  const interceptedElder = elders.find((e) => e.id === interceptedElderId) || activeElder;
+
+  // 家屬資訊
+  const guardianName = '張小明 (長子 • 聯防管理員)';
+
+  // 更新指定長輩的獨立攔截門檻
+  const updateElderThreshold = (elderId, newThreshold) => {
+    setElders((prev) =>
+      prev.map((item) => (item.id === elderId ? { ...item, threshold: newThreshold } : item))
+    );
   };
 
   // 千分位數字解析輔助函式
-  const handleFormattedNumberChange = (rawValue, setter, maxLimit = 100000000) => {
+  const handleFormattedNumberChange = (rawValue, onParsed, maxLimit = 100000000) => {
     const numericString = rawValue.replace(/[^0-9]/g, '');
     const parsed = numericString === '' ? 0 : Math.min(maxLimit, Number(numericString));
-    setter(parsed);
+    onParsed(parsed);
   };
 
   // Web Audio API 警報聲生成器
   const audioCtxRef = useRef(null);
   const oscRef = useRef(null);
 
-  // 解鎖平板/手機音效播放權限
   const handleUnlockAudio = () => {
     if (!audioCtxRef.current) {
       audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
@@ -44,7 +84,6 @@ export default function App() {
     setIsAudioUnlocked(true);
   };
 
-  // 播放/停止蜂鳴警報
   const triggerAlarm = (start) => {
     if (!start) {
       if (oscRef.current) {
@@ -76,7 +115,7 @@ export default function App() {
       oscRef.current = osc;
       setIsAlertPlaying(true);
     } catch (e) {
-      console.log("Audio play error:", e);
+      console.log('Audio play error:', e);
     }
   };
 
@@ -98,7 +137,8 @@ export default function App() {
   const handleTransfer = () => {
     if (!isAudioUnlocked) handleUnlockAudio();
 
-    if (transferAmount >= threshold) {
+    if (transferAmount >= activeElder.threshold) {
+      setInterceptedElderId(activeElder.id);
       setIsIntercepted(true);
       setCountdown(30);
       setIsApproved(false);
@@ -108,7 +148,9 @@ export default function App() {
         navigator.vibrate([500, 200, 500, 200, 1000]);
       }
     } else {
-      alert(`✅ 轉帳成功！金額：NT$ ${transferAmount.toLocaleString()}（未達防詐攔截門檻）`);
+      alert(
+        `✅ 轉帳成功！\n帳戶：${activeElder.name}（${activeElder.bank}）\n金額：NT$ ${transferAmount.toLocaleString()}（未達該帳戶設定之 NT$ ${activeElder.threshold.toLocaleString()} 攔截門檻）`
+      );
     }
   };
 
@@ -116,6 +158,7 @@ export default function App() {
   const handleReset = () => {
     triggerAlarm(false);
     setIsIntercepted(false);
+    setInterceptedElderId(null);
     setIsApproved(false);
     setIsTimeoutCancelled(false);
     setCountdown(30);
@@ -154,8 +197,8 @@ export default function App() {
             <ShieldCheck className="w-8 h-8 text-indigo-400" />
           </div>
           <div>
-            <h1 className="text-xl md:text-2xl font-black text-white">家庭防詐即時風控模擬器</h1>
-            <p className="text-xs md:text-sm text-slate-400">Family Transfer Anti-Fraud Guard • 雙端協同展示版</p>
+            <h1 className="text-xl md:text-2xl font-black text-white">金盾聯防 FamGuard • 家庭防詐風控模擬器</h1>
+            <p className="text-xs md:text-sm text-slate-400">支援多長輩 / 跨銀行帳號一對多即時監控</p>
           </div>
         </div>
         <button
@@ -169,18 +212,47 @@ export default function App() {
       {/* MAIN CONTENT */}
       <main className="max-w-6xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-6 my-auto py-6">
         
-        {/* 左欄：長輩轉帳模擬卡片 */}
+        {/* 左欄：長輩轉帳模擬卡片 (支援切換不同長輩帳號) */}
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 flex flex-col justify-between shadow-xl relative overflow-hidden">
           <div>
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-4">
               <span className="flex items-center gap-2 text-indigo-400 text-sm font-semibold bg-indigo-950/60 px-3 py-1.5 rounded-full border border-indigo-800/50">
                 <Smartphone className="w-4 h-4" /> 長輩網銀轉帳端
               </span>
-              <span className="text-xs text-slate-500">Demo Mode</span>
+              <span className="text-xs text-slate-400 font-mono">{activeElder.bank}</span>
             </div>
 
-            <div className="mb-6">
-              <label className="block text-slate-400 text-sm mb-2">輸入轉帳金額 (NT$)</label>
+            {/* 💡 切換發起轉帳的長輩帳號 */}
+            <div className="mb-5">
+              <label className="block text-slate-400 text-xs mb-2">選擇發起轉帳的長輩帳戶：</label>
+              <div className="grid grid-cols-3 gap-2">
+                {elders.map((elder) => (
+                  <button
+                    key={elder.id}
+                    disabled={isIntercepted}
+                    onClick={() => {
+                      setActiveElderId(elder.id);
+                      setManagingElderId(elder.id);
+                    }}
+                    className={`py-2 px-2 rounded-xl text-xs font-bold border transition truncate ${
+                      activeElderId === elder.id
+                        ? 'bg-indigo-600/30 text-indigo-200 border-indigo-400 shadow-sm'
+                        : 'bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-800 disabled:opacity-50'
+                    }`}
+                  >
+                    {elder.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-5">
+              <div className="flex items-center justify-between text-sm mb-2">
+                <span className="text-slate-400">輸入轉帳金額 (NT$)</span>
+                <span className="text-xs text-slate-500">
+                  此帳戶門檻：<span className="text-emerald-400 font-mono">NT$ {activeElder.threshold.toLocaleString()}</span>
+                </span>
+              </div>
               <input
                 type="text"
                 inputMode="numeric"
@@ -228,7 +300,7 @@ export default function App() {
                     已觸發風控託管，正在通知緊急聯絡人...
                   </div>
                   <p className="text-xs text-slate-300 leading-relaxed">
-                    已自動同步強行推播至預設聯絡人：<span className="text-white font-bold">{familyContact.name}</span> 的手機首頁與 App。
+                    偵測到 <span className="text-white font-bold">{interceptedElder.name}</span>（{interceptedElder.bank}）發起大額轉帳，已同步強行推播至 <span className="text-white font-bold">{guardianName}</span>。
                   </p>
                 </>
               )}
@@ -238,13 +310,13 @@ export default function App() {
               onClick={handleTransfer}
               className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-lg rounded-2xl shadow-lg shadow-indigo-600/30 active:scale-[0.98] transition"
             >
-              發送轉帳請求
+              發送轉帳請求（{activeElder.label}）
             </button>
           )}
         </div>
 
-        {/* 右欄：家屬風控設定與手機首頁模擬 */}
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 flex flex-col justify-between shadow-xl relative overflow-hidden min-h-[460px]">
+        {/* 右欄：家屬多帳號風控中心與手機首頁模擬 */}
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 flex flex-col justify-between shadow-xl relative overflow-hidden min-h-[500px]">
           
           {/* 當處於【手機首頁】且【沒有預警】時顯示首頁介面 */}
           {isHomeScreen && !isIntercepted ? (
@@ -253,22 +325,25 @@ export default function App() {
                 <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
                   <span className="text-xs text-slate-400 font-mono">09:41 • 5G 100%</span>
                   <span className="text-xs text-indigo-400 bg-indigo-950/60 px-2 py-0.5 rounded border border-indigo-800/40">
-                    模擬手機首頁狀態
+                    監控中：3 組家庭帳戶
                   </span>
                 </div>
 
                 <div className="text-center my-4">
                   <div className="text-3xl font-extrabold text-slate-200">09:41</div>
-                  <div className="text-xs text-slate-400">11月12日 星期四</div>
+                  <div className="text-xs text-slate-400">11月19日 星期四</div>
                 </div>
 
                 {/* 手機桌面的 App 圖示網格 */}
                 <div className="grid grid-cols-4 gap-4 my-6 px-2">
                   <div className="flex flex-col items-center gap-1.5 cursor-pointer" onClick={() => setIsHomeScreen(false)}>
-                    <div className="p-3 bg-indigo-600 rounded-2xl text-white shadow-lg shadow-indigo-600/40">
+                    <div className="p-3 bg-indigo-600 rounded-2xl text-white shadow-lg shadow-indigo-600/40 relative">
                       <ShieldCheck className="w-6 h-6" />
+                      <span className="absolute -top-1 -right-1 bg-emerald-500 text-[9px] font-bold px-1.5 rounded-full text-slate-950">
+                        3
+                      </span>
                     </div>
-                    <span className="text-[10px] text-slate-300 font-medium">防詐安控</span>
+                    <span className="text-[10px] text-slate-300 font-medium">金盾聯防</span>
                   </div>
 
                   <div className="flex flex-col items-center gap-1.5">
@@ -309,16 +384,16 @@ export default function App() {
               </div>
 
               <div className="text-center text-xs text-slate-500 pt-3 border-t border-slate-800">
-                點擊「防詐安控」Icon 可切換回設定頁；左端發起轉帳時將<span className="text-amber-400 font-bold">強行覆蓋警報</span>。
+                點擊「金盾聯防」可設定各長輩獨立額度；任一長輩超額轉帳時將<span className="text-amber-400 font-bold">強行覆蓋警報</span>。
               </div>
             </div>
           ) : (
-            /* 防詐 App 主頁介面 */
+            /* 防詐 App 多帳號管理主頁 */
             <>
               <div>
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-4">
                   <span className="flex items-center gap-2 text-emerald-400 text-sm font-semibold bg-emerald-950/60 px-3 py-1.5 rounded-full border border-emerald-800/50">
-                    <Lock className="w-4 h-4" /> 家屬聯防門檻與快捷聯絡
+                    <Users className="w-4 h-4" /> 多帳戶一對多聯防中心
                   </span>
                   <button
                     onClick={() => setIsHomeScreen(true)}
@@ -328,27 +403,47 @@ export default function App() {
                   </button>
                 </div>
 
-                {/* 平時顯示之家屬聯絡資訊 */}
-                <div className="bg-slate-950 rounded-2xl p-4 border border-slate-800 mb-6">
+                {/* 💡 家屬端切換要設定/聯絡的長輩卡片 */}
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  {elders.map((elder) => (
+                    <button
+                      key={elder.id}
+                      onClick={() => setManagingElderId(elder.id)}
+                      className={`p-2 rounded-xl border text-left transition ${
+                        managingElderId === elder.id
+                          ? 'bg-emerald-950/70 border-emerald-500 text-emerald-200'
+                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-800/70'
+                      }`}
+                    >
+                      <div className="text-xs font-bold truncate">{elder.label}</div>
+                      <div className="text-[10px] font-mono text-emerald-400/90 mt-0.5">
+                        門檻 {(elder.threshold / 10000).toFixed(0)}萬
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* 當前選中長輩的快捷聯絡資訊 */}
+                <div className="bg-slate-950 rounded-2xl p-3.5 border border-slate-800 mb-4">
                   <div className="text-xs text-slate-400 mb-2 flex items-center justify-between">
-                    <span>設定指定緊急關懷家屬：</span>
-                    <span className="text-emerald-400 font-bold">{familyContact.name}</span>
+                    <span>聯絡對象：<strong className="text-emerald-400">{managingElder.name}</strong></span>
+                    <span className="text-[10px] font-mono text-slate-500">{managingElder.bank}</span>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     <a
-                      href={`tel:${familyContact.phone}`}
+                      href={`tel:${managingElder.phone}`}
                       className="flex items-center justify-center gap-1.5 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-bold transition"
                     >
                       <Phone className="w-3.5 h-3.5" /> 電話直連
                     </a>
                     <a
-                      href={`sms:${familyContact.phone}?body=【防詐警報】發起轉帳測試確認`}
+                      href={`sms:${managingElder.phone}?body=【金盾聯防】關心確認轉帳狀況`}
                       className="flex items-center justify-center gap-1.5 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-bold transition"
                     >
                       <MessageSquare className="w-3.5 h-3.5" /> 發送簡訊
                     </a>
                     <a
-                      href={`https://line.me/R/ti/p/~${familyContact.lineId}`}
+                      href={`https://line.me/R/ti/p/~${managingElder.lineId}`}
                       target="_blank"
                       rel="noreferrer"
                       className="flex items-center justify-center gap-1.5 py-2 bg-green-600/20 hover:bg-green-600/30 text-green-300 border border-green-500/30 rounded-xl text-xs font-bold transition"
@@ -358,19 +453,27 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* 門檻設定 (1萬 ~ 300萬 + 千分位逗號) */}
-                <div className="mb-6">
-                  <label className="block text-slate-400 text-sm mb-2">單筆攔截約定金額 (NT$)</label>
-                  <div className="relative mb-4">
+                {/* 獨立門檻設定 (1萬 ~ 300萬 + 千分位逗號) */}
+                <div className="mb-4">
+                  <label className="block text-slate-400 text-xs mb-2">
+                    設定 <span className="text-emerald-400 font-bold">{managingElder.name}</span> 單筆攔截門檻 (NT$)
+                  </label>
+                  <div className="relative mb-3">
                     <input
                       type="text"
                       inputMode="numeric"
-                      value={threshold === 0 ? '' : threshold.toLocaleString()}
-                      onChange={(e) => handleFormattedNumberChange(e.target.value, setThreshold, 3000000)}
+                      value={managingElder.threshold === 0 ? '' : managingElder.threshold.toLocaleString()}
+                      onChange={(e) =>
+                        handleFormattedNumberChange(
+                          e.target.value,
+                          (val) => updateElderThreshold(managingElder.id, val),
+                          3000000
+                        )
+                      }
                       onBlur={() => {
-                        if (threshold < 10000) setThreshold(10000);
+                        if (managingElder.threshold < 10000) updateElderThreshold(managingElder.id, 10000);
                       }}
-                      className="w-full bg-slate-950 border border-emerald-500/40 rounded-2xl px-4 py-3 text-xl font-mono text-emerald-400 font-bold focus:outline-none focus:border-emerald-400 transition"
+                      className="w-full bg-slate-950 border border-emerald-500/40 rounded-2xl px-4 py-2.5 text-xl font-mono text-emerald-400 font-bold focus:outline-none focus:border-emerald-400 transition"
                       placeholder="10,000 ~ 3,000,000"
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-mono">
@@ -383,11 +486,11 @@ export default function App() {
                     min={10000}
                     max={3000000}
                     step={10000}
-                    value={Math.min(3000000, Math.max(10000, threshold))}
-                    onChange={(e) => setThreshold(Number(e.target.value))}
+                    value={Math.min(3000000, Math.max(10000, managingElder.threshold))}
+                    onChange={(e) => updateElderThreshold(managingElder.id, Number(e.target.value))}
                     className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                   />
-                  <div className="flex justify-between text-xs text-slate-500 mt-2 font-mono">
+                  <div className="flex justify-between text-xs text-slate-500 mt-1.5 font-mono">
                     <span>1萬</span>
                     <span>150萬</span>
                     <span>300萬</span>
@@ -395,16 +498,16 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-                <span>音效權限狀態：</span>
+              <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                <span>聯防狀態：已監控 <strong className="text-emerald-400">3</strong> 個家庭帳戶</span>
                 <span className={`font-bold ${isAudioUnlocked ? 'text-emerald-400' : 'text-amber-400'}`}>
-                  {isAudioUnlocked ? '● 警報已授權 (Audio Active)' : '○ 點擊螢幕進行授權'}
+                  {isAudioUnlocked ? '● 警報已授權' : '○ 待授權音效'}
                 </span>
               </div>
             </>
           )}
 
-          {/* 🚨 右欄預警爆閃彈窗 */}
+          {/* 🚨 右欄預警爆閃彈窗 (精準顯示觸發預警的長輩與銀行資訊) */}
           {isIntercepted && (
             <div className={`absolute inset-0 z-40 p-6 flex flex-col justify-between text-center ${
               isApproved 
@@ -419,42 +522,45 @@ export default function App() {
                     <ShieldAlert className="w-10 h-10" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-black text-red-500">高風險異常轉帳觸發！</h3>
+                    <div className="inline-block bg-red-600 text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full mb-1">
+                      警報來源：{interceptedElder.name} • {interceptedElder.bank}
+                    </div>
+                    <h3 className="text-xl font-black text-red-400">高風險異常轉帳觸發！</h3>
                     <p className="text-xs text-slate-300">
-                      長輩請求轉帳 <span className="text-amber-400 font-bold">NT$ {transferAmount.toLocaleString()}</span>
+                      請求轉帳 <span className="text-amber-400 font-bold">NT$ {transferAmount.toLocaleString()}</span>（超過設定門檻 NT$ {interceptedElder.threshold.toLocaleString()}）
                     </p>
                   </div>
 
                   {/* 託管倒數區 */}
                   <div className="bg-slate-950/90 border border-red-500/40 rounded-xl p-3">
-                    <div className="text-[11px] text-slate-400">家屬託管倒數中（系統強行中斷手機畫面上推）</div>
+                    <div className="text-[11px] text-slate-400">家屬託管倒數中（強行覆蓋手機畫面）</div>
                     <div className="text-3xl font-mono font-extrabold text-amber-400 my-0.5">
                       00:{countdown < 10 ? `0${countdown}` : countdown}
                     </div>
-                    <div className="text-[10px] text-slate-400">倒數結束將自動阻斷交易</div>
+                    <div className="text-[10px] text-slate-400">倒數結束未確認將自動取消交易</div>
                   </div>
 
-                  {/* 家屬即時快捷聯絡按鈕組 */}
+                  {/* 家屬即時快捷聯絡按鈕組 (自動帶入觸發預警的長輩電話/LINE) */}
                   <div className="bg-slate-900/80 border border-slate-700/60 rounded-xl p-2.5">
                     <div className="text-[11px] text-slate-300 mb-2 font-medium flex items-center justify-center gap-1">
-                      <span>📞 快捷聯絡長輩/緊急聯絡人：</span>
-                      <span className="text-emerald-400 font-bold">{familyContact.name}</span>
+                      <span>📞 立即聯絡確認：</span>
+                      <span className="text-emerald-400 font-bold">{interceptedElder.name}</span>
                     </div>
                     <div className="grid grid-cols-3 gap-1.5">
                       <a
-                        href={`tel:${familyContact.phone}`}
+                        href={`tel:${interceptedElder.phone}`}
                         className="flex items-center justify-center gap-1 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-bold shadow transition"
                       >
                         <Phone className="w-3 h-3" /> 打電話
                       </a>
                       <a
-                        href={`sms:${familyContact.phone}?body=【緊急防詐】您發起了高額轉帳 NT$${transferAmount.toLocaleString()}，請問是否為本人操作？`}
+                        href={`sms:${interceptedElder.phone}?body=【金盾聯防警報】偵測到您的帳戶（${interceptedElder.bank}）發起高額轉帳 NT$${transferAmount.toLocaleString()}，請問是否為本人操作？`}
                         className="flex items-center justify-center gap-1 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[11px] font-bold shadow transition"
                       >
                         <MessageSquare className="w-3 h-3" /> 傳簡訊
                       </a>
                       <a
-                        href={`https://line.me/R/ti/p/~${familyContact.lineId}`}
+                        href={`https://line.me/R/ti/p/~${interceptedElder.lineId}`}
                         target="_blank"
                         rel="noreferrer"
                         className="flex items-center justify-center gap-1 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded-lg text-[11px] font-bold shadow transition"
@@ -479,7 +585,7 @@ export default function App() {
                       onClick={() => {
                         triggerAlarm(false);
                         setIsIntercepted(false);
-                        alert("已阻斷該筆轉帳交易（帳戶安全未受封鎖）。");
+                        alert(`已阻斷 ${interceptedElder.name} 的該筆轉帳交易（帳戶安全未受封鎖）。`);
                       }}
                       className="py-2.5 px-2 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl shadow transition"
                     >
@@ -491,7 +597,9 @@ export default function App() {
                 <div className="my-auto py-4">
                   <CheckCircle className="w-16 h-16 text-emerald-400 mx-auto mb-2" />
                   <h3 className="text-lg font-bold text-emerald-400 mb-1">交易已放行</h3>
-                  <p className="text-xs text-slate-400 mb-4">家屬已進行雙重驗證放行此筆交易。</p>
+                  <p className="text-xs text-slate-400 mb-4">
+                    已授權 {interceptedElder.name}（{interceptedElder.bank}）之轉帳。
+                  </p>
                   <button onClick={handleReset} className="py-2 px-6 bg-slate-800 text-xs text-white rounded-xl">
                     重置模擬
                   </button>
@@ -500,7 +608,9 @@ export default function App() {
                 <div className="my-auto py-4">
                   <XCircle className="w-16 h-16 text-amber-400 mx-auto mb-2" />
                   <h3 className="text-lg font-bold text-amber-400 mb-1">交易已逾時自動取消</h3>
-                  <p className="text-xs text-slate-400 mb-4">由於未在 30 秒內確認，系統已保護資金安全並取消轉帳。</p>
+                  <p className="text-xs text-slate-400 mb-4">
+                    未在 30 秒內確認，已安全取消 {interceptedElder.name} 的轉帳並保持帳戶正常使用。
+                  </p>
                   <button onClick={handleReset} className="py-2 px-6 bg-slate-800 text-xs text-white rounded-xl">
                     返回主頁
                   </button>
@@ -514,7 +624,7 @@ export default function App() {
 
       {/* FOOTER */}
       <footer className="max-w-6xl mx-auto w-full text-center text-xs text-slate-500 pt-4 border-t border-slate-800/80">
-        Demo Version • 競賽展示專用 • Vite + React + Tailwind CSS
+        金盾聯防 FamGuard • 競賽展示專用 • Vite + React + Tailwind CSS
       </footer>
     </div>
   );
